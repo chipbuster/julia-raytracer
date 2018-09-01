@@ -4,7 +4,6 @@
 # http://www.cs.cmu.edu/afs/cs.cmu.edu/academic/class/15864-s04/www/assignment4/format.html
 
 import Base.IOStream
-import Base.Strings
 
 # An enumeration of the nonparametrized tokens allowed within ray files
 @enum TokType begin
@@ -208,149 +207,157 @@ const reservedWords = Dict{String, TokType}(
     "viewdir" => VIEWDIR,
 )
 
-function scanprogram(fcontents::AbstractString)::Vector{Token}
+function scanprogram(fcontents::IOStream)::Vector{Token}
 """Scan program, generating a list of tokens for parsing"""
     tokenlist = Vector{Token}()
     current::Char = ' '
 
     T = SymbolToken(SBT_RAYTRACER)
     push!(tokenlist, T)
-    while !isEOF(T)
-        fcontents = skipWhitespace(fcontents)
-        T,fcontents = getToken(fcontents)
+    while !eof(fcontents)
+        skipWhitespace(fcontents)
+        T = getToken(fcontents)
         push!(tokenlist,T)
     end
     return tokenlist
 end
 
 
-function getToken(fcontents::AbstractString)::Tuple{Token,AbstractString}
+function getToken(fcontents::IOStream)::Token
     """Process the next token in the filestream"""
-    if fcontents == ""
-        return (SymbolToken(EOFSYM), fcontents)
-    elseif isletter(fcontents[1]) || fcontents[1] == '_'
+    if eof(fcontents)
+        return SymbolToken(EOFSYM)
+    end
+
+    next = peek(fcontents)
+    if isletter(next) || next == '_'
         getIdent(fcontents)
-    elseif fcontents[1] == '"'
+    elseif next == '"'
         return getQuotedIdent(fcontents)
-    elseif isdigit(fcontents[1]) || fcontents[1] == '-' || fcontents[1] == '.'
+    elseif isdigit(next) || next == '-' || next == '.'
         return getScalar(fcontents)
     else
         return getPunctuation(fcontents)
     end
 end
 
-function getIdent(fcontents::AbstractString)::Tuple{Token,AbstractString}
+function getIdent(fcontents::IOStream)::Token
 """Read either an identifier or a reserved word token"""
     s = ""
-    j = 1
-    flength = length(fcontents)
-    while j <= flength && (isletter(fcontents[j]) 
-                                    || isdigit(fcontents[j]) 
-                                    || fcontents[j] == '_' 
-                                    || fcontents[j] == '-')
-        s *= fcontents[j]
-        j += 1
-        flength -= 1
+    while !eof(fcontents) 
+        c = peek(fcontents)
+        if (isletter(c) || isdigit(c) || c == '_' || c == '-')
+            read(fcontents,Char)
+            s *= c
+        else
+            break
+        end
     end
-    newcontents = fcontents[j+1:end]
 
     # Which token type to use?
     if s in keys(reservedWords)
-        (SymbolToken(reservedWords[s]), newcontents)
+        SymbolToken(reservedWords[s])
     else
-        (IdentToken(s), newcontents)
+        IdentToken(s)
     end
 end
 
-function getQuotedIdent(fcontents::AbstractString)::Tuple{Token,AbstractString}
+function getQuotedIdent(fcontents::IOStream)::Token
 """Read either an identifier or a reserved word token"""
     s = ""
-    j = 2
-    flength = length(fcontents)
-    while j <= flength && fcontents[j] != '"'
-        if fcontents[j] == '\n' error("Unterminated string constant") end
-        s *= fcontents[j]
-        j += 1
-        flength -= 1
+    while !eof(fcontents)
+        c = read(fcontents,Char)
+        if c == '\n' 
+            error("Unterminated string constant")
+        elseif c == '"'
+            break
+        else 
+            s *= c
+        end
     end
-    newcontents = fcontents[j+1:end]
 
     # Which token type to use?
     if s in keys(reservedWords)
-        (SymbolToken(reservedWords[s]), newcontents)
+        SymbolToken(reservedWords[s])
     else
-        (IdentToken(s), newcontents)
+        IdentToken(s)
     end
 end
 
-function getScalar(fcontents::AbstractString)::Tuple{NumericToken,AbstractString}
+function getScalar(fcontents::IOStream)::NumericToken
     s = ""
-    j = 1
-    while isdigit(fcontents[j]) || fcontents[j] == '-' || fcontents[j] == '.' ||
-          fcontents[j] == 'e'
-        s *= fcontents[j]
-        j += 1
+    while true
+        c = peek(fcontents)
+        if isdigit(c) || c == '-' || c == '.' || c == 'e'
+            s *= c
+            read(fcontents,Char)
+        else
+            break
+        end
     end
-    newcontents = fcontents[j+1:end]
     val = parse(Float64, s)
 
-    NumericToken(val), newcontents
+    NumericToken(val)
 end
 
-function getPunctuation(fcontents::AbstractString)::Tuple{SymbolToken,AbstractString}
-    if fcontents[1] == '('
-        SymbolToken(LPAREN), fcontents[2:end]
-    elseif fcontents[1] == ')'
-        SymbolToken(RPAREN), fcontents[2:end]
-    elseif fcontents[1] == '{'
-        SymbolToken(LBRACE), fcontents[2:end]
-    elseif fcontents[1] == '}'
-        SymbolToken(RBRACE), fcontents[2:end]
-    elseif fcontents[1] == ','
-        SymbolToken(COMMA), fcontents[2:end]
-    elseif fcontents[1] == '='
-        SymbolToken(EQUALS), fcontents[2:end]
-    elseif fcontents[1] == ';'
-        SymbolToken(SEMICOLON), fcontents[2:end]
+function getPunctuation(fcontents::IOStream)::SymbolToken
+    c = read(fcontents,Char)
+    if c == '('
+        SymbolToken(LPAREN)
+    elseif c == ')'
+        SymbolToken(RPAREN)
+    elseif c == '{'
+        SymbolToken(LBRACE)
+    elseif c == '}'
+        SymbolToken(RBRACE)
+    elseif c == ','
+        SymbolToken(COMMA)
+    elseif c == '='
+        SymbolToken(EQUALS)
+    elseif c == ';'
+        SymbolToken(SEMICOLON)
     else
-        error("Unexpected symbol in lex " * fcontents[1:min(end,100)])
+        error("Unexpected symbol in lex " * read(fcontents,String))
     end
 end
 
-function skipWhitespace(fcontents::AbstractString)
+function skipWhitespace(fcontents::IOStream)
 """Strip all leading whitespace from string, including comments"""
-    # Strip ordinary whitespace
-    finishStrip = false
-    while !finishStrip
-        fcontents = lstrip(fcontents)
-
-        # Early return candidates
-        if length(fcontents) == 0 || length(fcontents) == 1
-            return fcontents
-        end
-
-        if fcontents[1] == '/' && fcontents[2] == '/'
-            fcontents = dropLineComment(fcontents)
-        elseif fcontents[1] == '/' && fcontents[2] == '*'
-            fcontents = dropBlockComment(fcontents)
+    while !eof(fcontents)
+        c = peek(fcontents)
+        if isspace(c)
+            read(fcontents,Char)
+        elseif c == '/' && peek(fcontents) == '/'
+            dropLineComment(fcontents)
+        elseif c == '/' && peek(fcontents) == '*'
+            dropBlockComment(fcontents)
         else
-            finishStrip = true
+            break
         end
     end
-    return fcontents
 end
 
-function dropLineComment(s::AbstractString)
-    m = match(r"\n",s)
-    s[m.offset+1:end]
-end
-
-function dropBlockComment(s::AbstractString)
-    m = match(r"\*/",s)
-    if m === nothing
-        error("Unterminated Block Comment " * s[1:min(end,100)])
+function dropLineComment(s::IOStream)
+    c = read(s,Char)
+    while !eof(s) && c != '\n'
+        c = read(s,Char)
     end
-    s[m.offset+2:end]
 end
 
-isEOF(T::Token) = isa(T,SymbolToken) && T.kind == EOFSYM
+function dropBlockComment(s::IOStream)
+    c = read(s,Char)
+    while !eof(s)
+        if c == '*' && peek(s) == '/'
+            c = read(s,Char)
+            break
+        end
+        c = read(s,Char)
+    end
+end
+
+function peek(s::IOStream)
+    mark(s)
+    a = read(s,Char)
+    reset(s)
+    return a
+end

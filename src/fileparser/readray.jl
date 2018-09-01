@@ -10,12 +10,11 @@ function read_rayfile(fname::AbstractString)
         if firstline != "SBT-raytracer 1.0"
                 error(fname * " is not a valid ray file.")
             else
-                contents = read(f,String)
-                return parse_raycontents(contents)
+                return parse_raycontents(f)
         end
     end
 end
 
-function parse_raycontents(contents::AbstractString)
+function parse_raycontents(contents::IOStream)
     tokens = scanprogram(contents)
 end
