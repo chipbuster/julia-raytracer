@@ -1,9 +1,6 @@
 import Base.IOStream
 import Base.Strings
 
-include("tokenize.jl")
-
-
 function read_rayfile(fname::AbstractString)
     open(fname) do f
         firstline = readline(f)
