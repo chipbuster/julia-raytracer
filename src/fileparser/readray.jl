@@ -1,5 +1,4 @@
-import Base.IOStream
-import Base.Strings
+include("parsescene.jl")
 
 function read_rayfile(fname::AbstractString)
     open(fname) do f

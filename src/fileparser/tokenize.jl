@@ -229,7 +229,7 @@ function getToken(fcontents::IOStream)::Token
         return SymbolToken(EOFSYM)
     end
 
-    next = peek(fcontents)
+    next = Char(Base.peek(fcontents))
     if isletter(next) || next == '_'
         getIdent(fcontents)
     elseif next == '"'
@@ -245,7 +245,7 @@ function getIdent(fcontents::IOStream)::Token
 """Read either an identifier or a reserved word token"""
     s = ""
     while !eof(fcontents) 
-        c = peek(fcontents)
+        c = Char(Base.peek(fcontents))
         if (isletter(c) || isdigit(c) || c == '_' || c == '-')
             read(fcontents,Char)
             s *= c
@@ -287,7 +287,7 @@ end
 function getScalar(fcontents::IOStream)::NumericToken
     s = ""
     while true
-        c = peek(fcontents)
+        c = Char(Base.peek(fcontents))
         if isdigit(c) || c == '-' || c == '.' || c == 'e'
             s *= c
             read(fcontents,Char)
@@ -324,12 +324,12 @@ end
 function skipWhitespace(fcontents::IOStream)
 """Strip all leading whitespace from string, including comments"""
     while !eof(fcontents)
-        c = peek(fcontents)
+        c = Char(Base.peek(fcontents))
         if isspace(c)
             read(fcontents,Char)
-        elseif c == '/' && peek(fcontents) == '/'
+        elseif c == '/' && Char(Base.peek(fcontents)) == '/'
             dropLineComment(fcontents)
-        elseif c == '/' && peek(fcontents) == '*'
+        elseif c == '/' && Char(Base.peek(fcontents)) == '*'
             dropBlockComment(fcontents)
         else
             break
@@ -347,17 +347,10 @@ end
 function dropBlockComment(s::IOStream)
     c = read(s,Char)
     while !eof(s)
-        if c == '*' && peek(s) == '/'
+        if c == '*' && Char(Base.peek(s)) == '/'
             c = read(s,Char)
             break
         end
         c = read(s,Char)
     end
-end
-
-function peek(s::IOStream)
-    mark(s)
-    a = read(s,Char)
-    reset(s)
-    return a
 end
