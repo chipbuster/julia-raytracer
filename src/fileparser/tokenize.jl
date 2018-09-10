@@ -91,7 +91,6 @@ struct NumericToken <: Token
     value::Float64
 end
 
-
 const tokenNames = Dict{TokType, String}(
     EOFSYM => "EOF",
     SBT_RAYTRACER => "SBT-raytracer",
@@ -244,7 +243,7 @@ end
 function getIdent(fcontents::IOStream)::Token
 """Read either an identifier or a reserved word token"""
     s = ""
-    while !eof(fcontents) 
+    while !eof(fcontents)
         c = Char(Base.peek(fcontents))
         if (isletter(c) || isdigit(c) || c == '_' || c == '-')
             read(fcontents,Char)
@@ -267,11 +266,11 @@ function getQuotedIdent(fcontents::IOStream)::Token
     s = ""
     while !eof(fcontents)
         c = read(fcontents,Char)
-        if c == '\n' 
+        if c == '\n'
             error("Unterminated string constant")
         elseif c == '"'
             break
-        else 
+        else
             s *= c
         end
     end
