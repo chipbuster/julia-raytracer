@@ -98,6 +98,8 @@ end
 # Included in these are things like lights, cameras, and skyboxen
 abstract type InvisObject <: SceneObject end
 
+
+# Lights! Very important to lighting a scene.
 abstract type Light <: InvisObject end
 
 struct PointLight <: Light
@@ -105,4 +107,13 @@ struct PointLight <: Light
     position::SVector{3, Float64}
     attenCoeffs::NamedTuple{(:constant,:linear,:quadratic),
                  Tuple{Float64,Float64,Float64}}
+end
+
+struct DirectionalLight <: Light
+    color::SVector{3, Float64}
+    direction::SVector{3, Float64}
+end
+
+struct AmbientLight <: Light
+    color::SVector{3, Float64}
 end

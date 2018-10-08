@@ -4,6 +4,12 @@ include("../sceneObjects.jl")
 using StaticArrays
 using LinearAlgebra
 
+#= Note: almost all parsing functions within this module modify their inputs.
+#        I forgot to follow naming conventions until it was too late. Since
+#        most functions aren't exported, this shouldn't affect the outside
+#        world, but if you're modifying this file, remember that essentially
+#        every function here except Peek() is expected to modify its input. =#
+
 # Define utility functions to abstract away vector-of-tokens
 # We may need to change the internal representation (e.g. via reversing) later
 """Destructively read and return next token"""
@@ -118,6 +124,72 @@ function parsePointLight(tokens::Vector{Token})
                        quadratic = quadAttenCoeff))
 end
 
+# Final project implementation--ignore
+function parseAreaLight()
+    error("Not implemented")
+end
+
+function parseDirectionalLight(tokens::Vector{Token})
+    direction = @SVector [0,0,0]
+    color = @SVector [0,0,0]
+
+    hasDir, hasCol = false,false
+
+    Read!(tokens, DIRECTIONAL_LIGHT)
+    Read!(tokens, LBRACE)
+
+    # Enter parse loop until error or finish
+    while true
+        t = Peek(tokens)
+        if t.kind == DIRECTION
+            if hasDir
+               error("Repeated direction attribute in directional light") 
+            end
+            direction = parseVec3dExpression(tokens)
+            hasDir = true
+        elseif t.kind == COLOR
+            if hasCol
+                error("Repeated color attribute in directional light")
+            end
+            color = parseVec3dExpression(tokens)
+            hasCol = true
+        elseif t.kind == RBRACE
+            _ = Get!(tokens) #Consume the brace first, then decide what to do
+            if(!hasCol)
+                error("Attempted to get DirectionalLight without color")
+            elseif(!hasDir)
+                error("Attempted to get DirectionalLight without direction")
+            else
+                break
+            end
+        else
+            error("Unexpected token in PointLight: " * string(t))
+        end
+    end
+    return DirectionalLight(color,direction)
+end
+
+function parseAmbientLight(tokens::Vector{Token})
+    _ = Read!(tokens,AMBIENT_LIGHT)
+    _ = Read!(tokens,LBRACE)
+    if Peek(tokens).kind != COLOR
+        error("Expected COLOR token in AmbientLight")
+    end
+    color = parseVec3dExpression(tokens)
+    _ = Read!(tokens,RBRACE)
+
+    return AmbientLight(color)
+end
+
+function parseMaterial()
+    error("Not implemented")
+end
+
+function parseCamera()
+error("Not implemented")
+end
+
+
 function parseVec3dExpression(tokens::Vector{Token})
     _ = Get!(tokens)
     _ = Read!(tokens, EQUALS)
@@ -138,6 +210,30 @@ function parseVec3d(tokens::Vector{Token})
     return @SVector [a,b,c]
 end
 
+function parseVec4dExpression(tokens::Vector{Token})
+    _ = Get!(tokens) # Eat the name--we don't really care
+    _ = Read!(tokens, EQUALS)
+    vec = parseVec4d(tokens)
+    Read!(tokens, SEMICOLON)
+    return vec
+end
+
+function parseVec4d(tokens::Vector{Token})
+    _ = Read!(tokens, LPAREN)
+    a = Get!(tokens).value
+    _ = Read!(tokens, COMMA)
+    b = Get!(tokens).value
+    _ = Read!(tokens, COMMA)
+    c = Get!(tokens).value
+    _ = Read!(tokens, COMMA)
+    d = Get!(tokens).value
+    _ = Read!(tokens, RPAREN)
+
+    return @SVector [a,b,c,d]
+end
+
+
+
 function parseScalarExpression(tokens::Vector{Token})
     _ = Get!(tokens) # Throw out first token, which precedes the = sign
     _ = Read!(tokens, EQUALS)
@@ -150,22 +246,4 @@ function parseScalar(tokens::Vector{Token})
     return Get!(tokens).value
 end
 
-function parseAreaLight()
-    error("Not implemented")
-end
 
-function parseDirectionalLight()
-    error("Not implemented")
-end
-
-function parseAmbientLight()
-    error("Not implemented")
-end
-
-function parseMaterial()
-    error("Not implemented")
-end
-
-function parseCamera()
-error("Not implemented")
-end
