@@ -13,4 +13,6 @@ end
 
 function parse_raycontents(contents::IOStream)
     tokens = scanprogram(contents)
+    out = parseScene(tokens)
+    println(out)
 end

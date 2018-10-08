@@ -97,3 +97,12 @@ end
 # These are things that a director might change to get a better shot
 # Included in these are things like lights, cameras, and skyboxen
 abstract type InvisObject <: SceneObject end
+
+abstract type Light <: InvisObject end
+
+struct PointLight <: Light
+    color::SVector{3, Float64}
+    position::SVector{3, Float64}
+    attenCoeffs::NamedTuple{(:constant,:linear,:quadratic),
+                 Tuple{Float64,Float64,Float64}}
+end
