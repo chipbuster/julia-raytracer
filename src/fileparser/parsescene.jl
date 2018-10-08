@@ -39,6 +39,9 @@ function parseScene(tokens::Vector{Token})::Vector{SceneObject}
     objs = Vector{SceneObject}()
     scenetrans = SMatrix{3,3}(Matrix{Float64}(I,3,3)) #Used to track transformation of the element
     mat = nothing::Union{Nothing, Material}
+    camera = Camera(MMatrix{3,3}(Matrix{Float64}(I,3,3)), 1, 1,
+                    @MVector zeros(3), @MVector zeros(3),
+                    @MVector zeros(3), @MVector zeros(3))
     while !isempty(tokens)
         t = Peek(tokens)
             if t.kind in [SPHERE,BOX,SQUARE,CYLINDER,CONE,TRIMESH,TRANSLATE
@@ -53,7 +56,7 @@ function parseScene(tokens::Vector{Token})::Vector{SceneObject}
             elseif t.kind == AMBIENT_LIGHT
                 push!(objs, parseAmbientLight(tokens))
             elseif t.kind == CAMERA
-                push!(objs, parseCamera(tokens))
+                parseCamera(tokens, camera) #parseCamera mutates camera in-place
             elseif t.kind == MATERIAL
                 newmat = parseMaterial(tokens)
                 mat = newmat
@@ -71,7 +74,7 @@ function parseTransformableElement()
     error("Not implemented")
 end
 
-function parsePointLight(tokens::Vector{Token})
+function parsePointLight(tokens::Vector{Token})::PointLight
     position = @SVector [0,0,0]
     color = @SVector [0,0,0]
 
@@ -126,10 +129,10 @@ end
 
 # Final project implementation--ignore
 function parseAreaLight()
-    error("Not implemented")
+    error("What are you calling this for, nerd?")
 end
 
-function parseDirectionalLight(tokens::Vector{Token})
+function parseDirectionalLight(tokens::Vector{Token})::DirectionalLight
     direction = @SVector [0,0,0]
     color = @SVector [0,0,0]
 
@@ -169,7 +172,7 @@ function parseDirectionalLight(tokens::Vector{Token})
     return DirectionalLight(color,direction)
 end
 
-function parseAmbientLight(tokens::Vector{Token})
+function parseAmbientLight(tokens::Vector{Token})::AmbientLight
     _ = Read!(tokens,AMBIENT_LIGHT)
     _ = Read!(tokens,LBRACE)
     if Peek(tokens).kind != COLOR
@@ -185,10 +188,55 @@ function parseMaterial()
     error("Not implemented")
 end
 
-function parseCamera()
-error("Not implemented")
-end
+function parseCamera(tokens::Vector{Token}, camera::Camera)
+    hasViewDir, hasUpDir = false,false
+    viewDir = Vector{Float64}([0,0,0])
+    upDir = Vector{Float64}([0,0,0])
 
+    Read!(tokens,CAMERA)
+    Read!(tokens,LBRACE)
+
+    # Loop in camera parsing until rbrace found
+    while true
+        t = Peek(tokens)
+        q = @SVector zeros(4)
+        if t.kind == POSITION
+            pos = parseVec3dExpression(tokens)
+            camera.eye = pos
+        elseif t.kind == FOV
+            fov = parseScalarExpression(tokens)
+            #TODO: Set FOV of camera
+        elseif t.kind == QUATERNIAN
+            q = SVector{4,Float64}(parseVec4dExpression)
+            #TODO: Set look from q
+        elseif t.kind == ASPECTRATIO
+            asp = parseScalarExpression(tokens)
+            #TODO: Set aspect ratio from asp
+        elseif t.kind == VIEWDIR
+            viewDir = parseVec3dExpression(tokens)
+            hasViewDir = true
+        elseif t.kind == UPDIR
+            upDir = parseVec3dExpression(tokens)
+            hasUpDir = true
+        elseif t.kind == RBRACE
+            # Check to make sure we have both viewdir and updir
+            if hasViewDir
+                if !hasUpdir
+                    error("Expected updir when parsing camera")
+                end
+            else
+                if hasUpDir
+                    error("Expected viewdir when parsing camera")
+                end
+            end
+            _ = Read!(tokens, RBRACE)
+            #TODO: Update camera internal parameters consistently
+        else
+            error("Encountered unexpected token while parsing camera: " *
+              string(t)) 
+        end
+
+end
 
 function parseVec3dExpression(tokens::Vector{Token})
     _ = Get!(tokens)
@@ -232,8 +280,6 @@ function parseVec4d(tokens::Vector{Token})
     return @SVector [a,b,c,d]
 end
 
-
-
 function parseScalarExpression(tokens::Vector{Token})
     _ = Get!(tokens) # Throw out first token, which precedes the = sign
     _ = Read!(tokens, EQUALS)
@@ -246,4 +292,32 @@ function parseScalar(tokens::Vector{Token})
     return Get!(tokens).value
 end
 
+function parseBooleanExpression(tokens::Vector{Token})
+    _ = Get!(tokens)
+    _ = Read!(tokens, EQUALS)
+    val = parseBoolean(tokens)
+    _ = Read!(tokens, SEMICOLON)
+    return val
+end
 
+function parseBoolean(tokens::Vector{Token})::Bool
+    t = Get!(tokens)
+    if t.kind == SYMTRUE
+        return true
+    elseif t.kind == SYMFALSE
+        return false
+    else
+        error("Expected boolean token but got " * string(t))
+    end
+end
+
+function parseIdentExpression(tokens::Vector{Token})::AbstractString
+    _ = Get!(tokens)
+    _ = Read!(tokens,EQUALS)
+    val = parseIdent(tokens)
+    _ = Read!(tokens, SEMICOLON)
+end
+
+function parseIdent(tokens)
+    return Get!(tokens).ident
+end

@@ -84,7 +84,7 @@ struct SymbolToken <: Token
 end
 
 struct IdentToken <: Token
-    ident::AbstractString
+    ident::String
 end
 
 struct NumericToken <: Token

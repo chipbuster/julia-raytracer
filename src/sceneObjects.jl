@@ -117,3 +117,15 @@ end
 struct AmbientLight <: Light
     color::SVector{3, Float64}
 end
+
+# Cameras, used for specifying camera locations
+mutable struct Camera <: InvisObject
+    m::MMatrix{3,3, Float64} # Rotation matrix for camera
+    normalizedHeight::Float64
+    aspectRatio::Float64
+
+    eye::MVector{3, Float64} # Eye of the camera (its the thrill of the fight)
+    look::MVector{3, Float64} # direction of looking
+    u::MVector{3, Float64} 
+    v::MVector{3, Float64}
+end
