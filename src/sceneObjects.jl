@@ -18,7 +18,7 @@ struct ParamMaterial <: Material
     refl::Bool             # Specular reflector?
     trans::Bool            # Specular transmissive?
     spec::Bool             # Is specular?
-    index::Float64         # In
+    index::Float64         # Index of refraction
 end
 
 # Material properties determined by texture mapping
