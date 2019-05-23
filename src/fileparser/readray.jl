@@ -1,5 +1,8 @@
 include("parsescene.jl")
 
+import .RayParse.RayLex: tokenizeProgram
+import .RayParse: parseScene
+
 function read_rayfile(fname::AbstractString)
     open(fname) do f
         firstline = readline(f)
@@ -12,7 +15,9 @@ function read_rayfile(fname::AbstractString)
 end
 
 function parse_raycontents(contents::IOStream)
-    tokens = scanprogram(contents)
+    tokens = tokenizeProgram(contents)
     out = parseScene(tokens)
     println(out)
 end
+
+read_rayfile(ARGS[1])

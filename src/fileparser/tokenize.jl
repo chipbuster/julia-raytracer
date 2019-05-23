@@ -1,9 +1,32 @@
-# The code responsible for tokenization of the raytracer scenes
-# Tokenization borrowed from C++ code in UT CS 386G (Graphics)
-# Input file format specification available at
-# http://www.cs.cmu.edu/afs/cs.cmu.edu/academic/class/15864-s04/www/assignment4/format.html
+#= The code responsible for tokenization of the raytracer scenes
+ Tokenization borrowed from C++ code in UT CS 386G (Graphics)
+ Input file format specification available at
+ http://www.cs.cmu.edu/afs/cs.cmu.edu/academic/class/15864-s04/www/assignment4/format.html
+
+ Notable similarities: our token types, token names, and reservedWords list
+ remain unchanged from the C++ version. The algorithm for scanning the program
+ to lex tokens is also surprisingly similar, although it returns a Vector of 
+ Tokens instead of lazily generating tokens on request.
+ 
+ Notable differences: In Julia, we cannot subtype a concrete type. This means 
+ that most of our types must be abstract, and leads to some implementations that 
+ differ from the C++ code. In this file, our class hierarchy looks slightly
+ different from what is used in the C++ code. We use a separate SymbolToken 
+ type to represent the C++ base Token, while IdentToken and ScalarToken (in 
+ this code, NumericToken) remain more-or-less in place.
+
+ N.B. This relies on Base.peek() being specialized for IOStreams to run at 
+ any appreciable speed. Implementing peek() via mark-read-reset causes the
+ lexer to take quite a few minutes to complete its job.
+=#
 
 import Base.IOStream
+
+module RayLex
+
+export TokType
+export Token, SymbolToken, IdentToken, NumericToken
+export tokenizeProgram
 
 # An enumeration of the nonparametrized tokens allowed within ray files
 @enum TokType begin
@@ -81,74 +104,77 @@ abstract type Token <: Any end
 
 struct SymbolToken <: Token
     kind::TokType
+#    floc::Tuple{Int, Int}
 end
 
 struct IdentToken <: Token
     ident::String
+#    floc::Tuple{Int,Int}
 end
 
 struct NumericToken <: Token
     value::Float64
+#    floc::Tuple{Int,Int}
 end
 
 const tokenNames = Dict{TokType, String}(
     EOFSYM => "EOF",
     SBT_RAYTRACER => "SBT-raytracer",
-      SYMTRUE => "true",
-      SYMFALSE => "false",
-      LPAREN => "Left paren",
-      RPAREN => "Right paren",
-      LBRACE => "Left brace",
-      RBRACE => "Right brace",
-      COMMA => "Comma",
-      EQUALS => "Equals",
-      SEMICOLON => "Semicolon",
-      CAMERA => "camera",
-      AMBIENT_LIGHT => "ambient_light",
-      POINT_LIGHT => "point_light",
-      DIRECTIONAL_LIGHT => "directional_light",
-      AREA_LIGHT => "area_light",
-      CONSTANT_ATTENUATION_COEFF => "constant_attenuation_coeff",
-      LINEAR_ATTENUATION_COEFF => "linear_attenuation_coeff",
-      QUADRATIC_ATTENUATION_COEFF => "quadratic_attenuation_coeff",
-      LIGHT_RADIUS => "light_radius",
-      SPHERE => "sphere",
-      BOX => "box",
-      SQUARE => "square",
-      CYLINDER => "cylinder",
-      CONE => "cone",
-      TRIMESH => "trimesh",
-      POSITION => "position",
-      VIEWDIR => "viewdir",
-      UPDIR => "updir",
-      ASPECTRATIO => "aspectratio",
-      COLOR => "color",
-      DIRECTION => "direction",
-      CAPPED => "capped",
-      HEIGHT => "height",
-      BOTTOM_RADIUS => "bottom_radius",
-      TOP_RADIUS => "top_radius",
-      QUATERNION => "quaternion",
-      POLYPOINTS => "points",
-      HEIGHT => "height",
-      NORMALS => "normals",
-      MATERIALS => "materials",
-      FACES => "faces",
-      TRANSLATE => "translate",
-      SCALE => "scale",
-      ROTATE => "rotate",
-      TRANSFORM => "transform",
-      MATERIAL => "material",
-      EMISSIVE => "emissive",
-      AMBIENT => "ambient",
-      SPECULAR => "specular",
-      REFLECTIVE => "reflective",
-      DIFFUSE => "diffuse",
-      TRANSMISSIVE => "transmissive",
-      SHININESS => "shininess",
-      INDEX => "index",
-      NAME => "name",
-      MAP => "map"
+    SYMTRUE => "true",
+    SYMFALSE => "false",
+    LPAREN => "Left paren",
+    RPAREN => "Right paren",
+    LBRACE => "Left brace",
+    RBRACE => "Right brace",
+    COMMA => "Comma",
+    EQUALS => "Equals",
+    SEMICOLON => "Semicolon",
+    CAMERA => "camera",
+    AMBIENT_LIGHT => "ambient_light",
+    POINT_LIGHT => "point_light",
+    DIRECTIONAL_LIGHT => "directional_light",
+    AREA_LIGHT => "area_light",
+    CONSTANT_ATTENUATION_COEFF => "constant_attenuation_coeff",
+    LINEAR_ATTENUATION_COEFF => "linear_attenuation_coeff",
+    QUADRATIC_ATTENUATION_COEFF => "quadratic_attenuation_coeff",
+    LIGHT_RADIUS => "light_radius",
+    SPHERE => "sphere",
+    BOX => "box",
+    SQUARE => "square",
+    CYLINDER => "cylinder",
+    CONE => "cone",
+    TRIMESH => "trimesh",
+    POSITION => "position",
+    VIEWDIR => "viewdir",
+    UPDIR => "updir",
+    ASPECTRATIO => "aspectratio",
+    COLOR => "color",
+    DIRECTION => "direction",
+    CAPPED => "capped",
+    HEIGHT => "height",
+    BOTTOM_RADIUS => "bottom_radius",
+    TOP_RADIUS => "top_radius",
+    QUATERNION => "quaternion",
+    POLYPOINTS => "points",
+    HEIGHT => "height",
+    NORMALS => "normals",
+    MATERIALS => "materials",
+    FACES => "faces",
+    TRANSLATE => "translate",
+    SCALE => "scale",
+    ROTATE => "rotate",
+    TRANSFORM => "transform",
+    MATERIAL => "material",
+    EMISSIVE => "emissive",
+    AMBIENT => "ambient",
+    SPECULAR => "specular",
+    REFLECTIVE => "reflective",
+    DIFFUSE => "diffuse",
+    TRANSMISSIVE => "transmissive",
+    SHININESS => "shininess",
+    INDEX => "index",
+    NAME => "name",
+    MAP => "map"
 )
 
 const reservedWords = Dict{String, TokType}(
@@ -206,10 +232,13 @@ const reservedWords = Dict{String, TokType}(
     "viewdir" => VIEWDIR,
 )
 
-function scanprogram(fcontents::IOStream)::Vector{Token}
+function tokenizeProgram(fcontents::IOStream)::Vector{Token}
 """Scan program, generating a list of tokens for parsing"""
     tokenlist = Vector{Token}()
     current::Char = ' '
+
+    linenum = 0
+    colnum = 0
 
     T = SymbolToken(SBT_RAYTRACER)
     push!(tokenlist, T)
@@ -352,4 +381,6 @@ function dropBlockComment(s::IOStream)
         end
         c = read(s,Char)
     end
+end
+
 end

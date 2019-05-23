@@ -1,4 +1,14 @@
+include("rayHelpers.jl")
+module SceneObjects
+
+export Material, ParamMaterial, MappedMaterial
+export SceneObject, GeomObject, RealGeometry, OrgGeometry
+export Box, Cone, Cylinder, Sphere, Square, Trimesh
+export Light, DirectionalLight, PointLight, AmbientLight
+export Camera
+
 using StaticArrays
+using ..RayHelper
 
 #################
 ### Materials ###
@@ -15,10 +25,10 @@ struct ParamMaterial <: Material
     k_r::SVector{3,Float64}   # Reflective
     k_t::SVector{3,Float64}   # Transmissive
     shiny::SVector{3,Float64} # Shininess
-    refl::Bool             # Specular reflector?
-    trans::Bool            # Specular transmissive?
-    spec::Bool             # Is specular?
-    index::Float64         # Index of refraction
+    refl::Bool                # Specular reflector?
+    trans::Bool               # Specular transmissive?
+    spec::Bool                # Is specular?
+    index::Float64            # Index of refraction
 end
 
 # Material properties determined by texture mapping
@@ -48,7 +58,7 @@ struct Box <: RealGeometry
     min::SVector{3,Float64}
     max::SVector{3,Float64}
     mat::Material
-    transform::SMatrix{2,2,Float64}
+    transform::SMat4
 end
 
 # TODO: update to be inline with main parser
@@ -59,7 +69,7 @@ struct Cone <: RealGeometry
     height::Float64
     mat::Material
     capped::Bool
-    transform::SMatrix{2,2,Float64}
+    transform::SMat4
 end
 
 struct Cylinder <: RealGeometry
@@ -68,14 +78,14 @@ struct Cylinder <: RealGeometry
     radius::Float64
     mat::Material
     capped::Bool
-    transform::SMatrix{2,2,Float64}
+    transform::SMat4
 end
 
 struct Sphere <: RealGeometry
     center::SVector{3,Float64}
     radius::Float64
     mat::Material
-    transform::SMatrix{2,2,Float64}
+    transform::SMat4
 end
 
 struct Square <: RealGeometry
@@ -83,7 +93,7 @@ struct Square <: RealGeometry
     normal::SVector{3,Float64}
     sidelength::Float64
     mat::Material
-    transform::SMatrix{2,2,Float64}
+    transform::SMat4
 end
 
 struct Trimesh <: RealGeometry
@@ -91,13 +101,12 @@ struct Trimesh <: RealGeometry
     normals::Matrix{Float64}
     edges::Vector{Tuple{Int64,Int64}}
     mat::Material
-    transform::SMatrix{2,2,Float64}
+    transform::SMat4
 end
 
 # These are things that a director might change to get a better shot
 # Included in these are things like lights, cameras, and skyboxen
 abstract type InvisObject <: SceneObject end
-
 
 # Lights! Very important to lighting a scene.
 abstract type Light <: InvisObject end
@@ -110,22 +119,24 @@ struct PointLight <: Light
 end
 
 struct DirectionalLight <: Light
-    color::SVector{3, Float64}
-    direction::SVector{3, Float64}
+    color::SVec3
+    direction::SVec3
 end
 
 struct AmbientLight <: Light
-    color::SVector{3, Float64}
+    color::SVec3
 end
 
 # Cameras, used for specifying camera locations
 mutable struct Camera <: InvisObject
-    m::MMatrix{3,3, Float64} # Rotation matrix for camera
+    m::MMat3 # Rotation matrix for camera
     normalizedHeight::Float64
     aspectRatio::Float64
 
-    eye::MVector{3, Float64} # Eye of the camera (its the thrill of the fight)
-    look::MVector{3, Float64} # direction of looking
-    u::MVector{3, Float64} 
-    v::MVector{3, Float64}
+    eye::MVec3 # Eye of the camera (its the thrill of the fight)
+    look::MVec3 # direction of looking
+    u::MVec3
+    v::MVec3
+end
+
 end

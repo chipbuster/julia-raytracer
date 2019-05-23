@@ -27,4 +27,3 @@ end
 TMat = SMatrix{4,4}
 TStack = Vector{TMat}
 TInfo = Tuple{TStack, TMat}
-

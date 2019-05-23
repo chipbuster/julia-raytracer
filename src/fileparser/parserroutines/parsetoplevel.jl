@@ -51,7 +51,7 @@ function parseCamera!(tokens::Vector{Token}, camera::Camera)
 end
 
 #TODO: update to allow correct pushing of multiple elements
-function parseTransformableElement(tokens::Vector{Token}, transform::TInfo,
+function parseTransformableElement(tokens::Vector{Token}, transform::TransformStack,
                                    mat::Material)::Vector{SceneObject}
     t = Peek(tokens)
     if t.kind in [SPHERE,BOX,SQUARE,CYLINDER,CONE,TRIMESH,TRANSLATE,ROTATE,
