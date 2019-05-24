@@ -9,35 +9,11 @@ export Camera
 
 using StaticArrays
 using ..RayHelper
+import FileIO: load
 
 #################
 ### Materials ###
 #################
-
-abstract type Material end
-
-# Material properties determined by parameters
-struct ParamMaterial <: Material
-    k_e::SVector{3,Float64}   # Emissivity
-    k_a::SVector{3,Float64}   # Ambient
-    k_s::SVector{3,Float64}   # Specular
-    k_d::SVector{3,Float64}   # Diffuse (Lambertian)
-    k_r::SVector{3,Float64}   # Reflective
-    k_t::SVector{3,Float64}   # Transmissive
-    shiny::SVector{3,Float64} # Shininess
-    refl::Bool                # Specular reflector?
-    trans::Bool               # Specular transmissive?
-    spec::Bool                # Is specular?
-    index::Float64            # Index of refraction
-end
-
-# Material properties determined by texture mapping
-struct MappedMaterial <: Material
-    tex::Matrix{UInt8}
-    width::Int
-    height::Int
-    file::AbstractString
-end
 
 #####################
 ### Scene Objects ###

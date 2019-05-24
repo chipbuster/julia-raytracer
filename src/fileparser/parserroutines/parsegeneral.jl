@@ -23,6 +23,20 @@ function Read!(stream::Vector{Token}, tokt::TokType)::Token
     end
 end
 
+"""If the token matches the type, read it and return True. Else don't read it
+   and return False"""
+function CondRead!(stream::Vector{Token}, tokt::TokType)::Token
+    head = Peek(stream)
+    if head isa SymbolToken && head.kind == tokt
+        popfirst!(stream)
+        return true
+    else
+        return false
+    end
+end
+
+
+
 # Define a transformation stack as a set of 4x4 matrices
 TMat = SMatrix{4,4}
 TStack = Vector{TMat}

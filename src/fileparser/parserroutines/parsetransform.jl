@@ -94,4 +94,6 @@ function parseTransform(tokens::Vector{Token})::Vector{SceneObject}
 
     Read!(tokens,RPAREN)
     Read!(tokens,SEMICOLON)
+
+    return objs
 end

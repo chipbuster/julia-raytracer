@@ -1,0 +1,24 @@
+SBT-raytracer 1.0
+
+point_light {
+    position = (4, 4, 4);
+    color = (.5, .5, .5);
+    constant_attenuation_coeff= 0.25;
+    linear_attenuation_coeff = 0.003372407;
+    quadratic_attenuation_coeff = 0.000045492;  
+}
+
+directional_light {
+    direction = (0, -1, 0);
+    colour = (1.0, 1.0, 1.0);
+}
+
+directional_light {
+    direction = (0,1,0);
+    colour = (0.2,0.2,0.2);
+}
+
+ambient_light {
+    color = (1, 0, .1);
+}
+
