@@ -6,12 +6,14 @@ using StaticArrays
 using LinearAlgebra
 
 using DataStructures: Stack
-using Main.RayHelper
-using Main.SceneObjects
+using ..Material
 
 include("tokenize.jl")
 using .RayLex
 using ..SceneObjects
+
+"""A Vector for all named materials that have been parsed so far"""
+namedMaterials = Vector{Material}
 
 # Import the TokType enum values so we can use them to parse...
 

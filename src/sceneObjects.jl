@@ -15,6 +15,8 @@ import FileIO: load
 ### Materials ###
 #################
 
+include("materials.jl")
+
 #####################
 ### Scene Objects ###
 #####################
