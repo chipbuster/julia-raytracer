@@ -64,21 +64,55 @@ function parseTransformableElement(tokens::Vector{Token}, transform::TransformSt
     end
 end
 
-function parseGroup(tokens::Vector{Token}, transform::TInfo, mat::Material)
-    newMat = missing::Union{Missing,Material}
+function parseGroup(tokens::Vector{Token}, transform::TransformStack, mat::Material)
+    newMat = nothing::Union{Nothing,Material}
+    objs = Vector{SceneObject}()
     Read!(tokens,LBRACE)
-    t = Peek(tokens)
-    if t.kind in [SPHERE,BOX,SQUARE,CYLINDER,CONE,TRIMESH,TRANSLATE,ROTATE,
-                  SCALE,TRANSFORM, LBRACE]
-        parseTransformableElement(tokens, transform, mat == missing ? newMat : mat)
+    while true:
+        t = Peek(tokens)
+        if t.kind in [SPHERE,BOX,SQUARE,CYLINDER,CONE,TRIMESH,TRANSLATE,ROTATE,
+                    SCALE,TRANSFORM, LBRACE]
+            newobjs = parseTransformableElement(tokens, transform, mat == missing ? newMat : mat)
+            append!(objs,newobjs)
+        elseif t.kind == RBRACE
+            Read!(tokens, RBRACE)
+            return objs
+        elseif t.kind == MATERIAL
+            mat = parseMaterialExpression(tokens,mat)
+        else
+            error("Expected '}' or geometry, got " * string(tok))
+        end
     end
-    if t.kind == RBRACE
-        Read!(tokens, RBRACE)
-    end
-
 end
 
-function parseGeometry()
-    error("Not implemented")
+function parseGeometry(tokens::Vector{Token}, transform::TransformStack, mat::Material)
+    tok = Peek!(tokens)
+    if !(tok isa SymbolToken)
+        error("Expected a symbol token but got " * string(tok))
+    end
+
+    if tok.kind == SPHERE
+        return parseSphere(tokens,transform,mat)
+    elseif tok.kind == BOX
+        return parseBox(tokens,transform,mat)
+    elseif tok.kind == SQUARE
+        return parseSquare(tokens,transform,mat)
+    elseif tok.kind == CYLINDER
+        return parseCylinder(tokens,transform,mat)
+    elseif tok.kind == CONE
+        return parseCone(tokens,transform,mat)
+    elseif tok.kind == TRIMESH
+        return parseTrimesh(tokens,transform,mat)
+    elseif tok.kind == TRANSLATE
+        return parseTranslate(tokens,transform,mat)
+    elseif tok.kind == ROTATE
+        return parseRotate(tokens,transform,mat)
+    elseif tok.kind == SCALE
+        return parseScale(tokens,transform,mat)
+    elseif tok.kind == TRANSFORM
+        return parseTransform(tokens,transform,mat)
+    else
+        error("Unrecognized geometry type.")
+    end
 end
 

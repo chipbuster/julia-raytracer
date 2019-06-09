@@ -1,0 +1,6 @@
+authors = ["Kevin Song <chipbuster@gmail.com>"]
+name = "RayTracer"
+uuid = "85059f84-8afe-11e9-05d9-3b1bd94582ff"
+version = "0.1.0"
+
+[deps]

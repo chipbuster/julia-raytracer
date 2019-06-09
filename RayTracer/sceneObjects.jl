@@ -32,53 +32,77 @@ abstract type OrgGeometry <: GeomObject end # Cannot be rendered
 
 ### Real Geometries
 
+# More details on Geometry can be found at 
+# https://www.cs.cmu.edu/afs/cs.cmu.edu/academic/class/15864-s04/www/assignment4/format.html
+# The gist is that most shapes have some "canonical" orientation and size, and 
+# rely on the transform field to dictate what they actually look like.
+#
+
+"""
+A unit cube (edgelength = 1) centered on the origin.
+"""
 struct Box <: RealGeometry
-    min::SVector{3,Float64}
-    max::SVector{3,Float64}
     mat::Material
     transform::SMat4
 end
 
-# TODO: update to be inline with main parser
+# Default transformation is identity, material must be speceified.
+Box(mat; transform = SMat4(I)) = Box(mat, transform)
+
+"""
+A generalized cylinder (i.e. the circular faces can have different radiuses). 
+The central axis is along the Z-axis and it runs from Z = 0 to Z = height.
+Circular faces can be filled in or left missing (controlled by `capped`). This 
+the only shape that's actually parameterized (for some reason).
+"""
 struct Cone <: RealGeometry
-    center::SVector{3,Float64}
-    dir::SVector{3,Float64}
-    radius::Float64
     height::Float64
+    top_radius::Float64
+    bot_radius::Float64
     mat::Material
     capped::Bool
     transform::SMat4
 end
 
+Cone(mat; height = 1.0, top_radius = 0.0, bot_radius = 1.0, capped = false,
+          transform = SMat4(I)) = 
+Cone(height, top_radius, bot_radius, mat, capped, transform)
+
+"""
+A cylinder of radius 1, with the longitudinal axis aligned with the Z-axis.
+It runs from Z=0 to Z=1 and has a boolean to indicate if the circular faces exist.
+"""
 struct Cylinder <: RealGeometry
-    cent1::SVector{3,Float64}  # Center of one face
-    cent2::SVector{3,Float64}  # Center of other face
-    radius::Float64
     mat::Material
     capped::Bool
     transform::SMat4
 end
 
+"""
+A unit sphere (radius = 1) centered on the origin
+"""
 struct Sphere <: RealGeometry
-    center::SVector{3,Float64}
-    radius::Float64
     mat::Material
     transform::SMat4
 end
 
+"""
+A unit square (edgelength = 1) at in the XY-plane. Centered at the origin.
+"""
 struct Square <: RealGeometry
-    center::SVector{3,Float64}
-    normal::SVector{3,Float64}
-    sidelength::Float64
     mat::Material
     transform::SMat4
 end
 
+"""
+A structure which contains a triangular mesh. Specified by vertices (points
+in R^3) and faces (tuples of indices)
+"""
 struct Trimesh <: RealGeometry
-    points::Matrix{Float64}
-    normals::Matrix{Float64}
-    edges::Vector{Tuple{Int64,Int64}}
-    mat::Material
+    vertices::Vector{SVec3}
+    normals::Vector{SVec3}
+    faces::Vector{Tuple{Int,Int,Int}}
+    materials::Vector{Material}
     transform::SMat4
 end
 
@@ -90,10 +114,9 @@ abstract type InvisObject <: SceneObject end
 abstract type Light <: InvisObject end
 
 struct PointLight <: Light
-    color::SVector{3, Float64}
-    position::SVector{3, Float64}
-    attenCoeffs::NamedTuple{(:constant,:linear,:quadratic),
-                 Tuple{Float64,Float64,Float64}}
+    color::SVector{3,Float64}
+    position::SVector{3,Float64}
+    attenCoeffs::NamedTuple{(:constant, :linear, :quadratic),Tuple{Float64,Float64,Float64}}
 end
 
 struct DirectionalLight <: Light

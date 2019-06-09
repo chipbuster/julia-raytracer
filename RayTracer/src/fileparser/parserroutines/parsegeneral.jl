@@ -12,10 +12,13 @@ function Peek(stream::Vector{T})::T where {T}
     return stream[1]
 end
 
-"""Get the next token and check that it's of the expected type"""
+"""Consume a SymbolToken of the specified kind, destryoing it.
+
+This function should only be called if it is "known" that the 
+next token has this kind, as it will error otherwise."""
 function Read!(stream::Vector{Token}, tokt::TokType)::Token
     head = popfirst!(stream)
-    if head isa SymbolToken && head.kind == tokt
+    if tokIsKind(head, tokt)
         return head
     else
         error("Token was not of expected type: expected a " * string(tokt) * "
@@ -23,16 +26,21 @@ function Read!(stream::Vector{Token}, tokt::TokType)::Token
     end
 end
 
-"""If the token matches the type, read it and return True. Else don't read it
-   and return False"""
+"""Read a token only if it's a symbol token matching the specified
+kind, otherwise leaving the stream untouched."""
 function CondRead!(stream::Vector{Token}, tokt::TokType)::Token
     head = Peek(stream)
-    if head isa SymbolToken && head.kind == tokt
+    if tokIsKind(head, tokt)
         popfirst!(stream)
         return true
     else
         return false
     end
+end
+
+"""Check to see if a token is a SymbolToken of the specified kind"""
+function tokIsKind(tok::Token, tokt::TokType)::Bool
+    tok isa SymbolToken && tok.kind == tokt
 end
 
 

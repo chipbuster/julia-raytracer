@@ -1,5 +1,10 @@
 module Material
 
+# Datatypes used for images: RGB is a 3-vector describing RGB values
+# N0f8 is a Normalized rational using 0 integer bits and 8 fractional bits
+# (essentially an 8-bit uint normalized to [0,1])
+using Images: RGB, N0f8
+
 """
 Represents information about how a material reflects/absorbs/refracts light.
 
@@ -26,7 +31,7 @@ end
 MappedParameter(fname::String) = begin
     img = load(fname)
     w,h = size(img)
-    TextureMap(fname, w, h, img)
+    MappedParameter(fname, w, h, img)
 end
 
 # Currently, these next two functions will break because images are 

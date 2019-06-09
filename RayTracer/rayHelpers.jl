@@ -44,7 +44,7 @@ function glmTranslate(w::SVec3)
         0 0 0 w[2];
         0 0 0 w[3];
         0 0 0 1.;
-    ])
+    ]
 end
 
 """Create a projective matrix which rotates points by w rads around the axis"""

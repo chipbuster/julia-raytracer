@@ -102,20 +102,42 @@ end
 
 abstract type Token <: Any end
 
+struct FileLocInfo
+    fname  :: AbstractString
+    lineno :: Int
+    colno  :: Int
+end
+
+struct Token{T} where {T}
+
 struct SymbolToken <: Token
     kind::TokType
-#    floc::Tuple{Int, Int}
+    floc::FileLocInfo
 end
 
 struct IdentToken <: Token
     ident::String
-#    floc::Tuple{Int,Int}
+    floc::FileLocInfo
 end
 
 struct NumericToken <: Token
     value::Float64
-#    floc::Tuple{Int,Int}
+    floc::FileLocInfo
 end
+
+# This is technically bad because you cannot generate an instance of FileLocInfo
+# from a shown instance...but I doubt anyone will really want to do that.
+function Base.show(io::IO, m::FileLocInfo)
+    compact = get(io, :compact, false)
+
+    if !compact
+        print(io, "in file ", m.fname," on line ",m.lineno,", column ",m.colno)
+    else
+        print(io, m.fname, ":", m.lineno, ":" , m.colno)
+    end
+end
+
+function Base.show(io::IO, m::FileLocInfo)
 
 const tokenNames = Dict{TokType, String}(
     EOFSYM => "EOF",

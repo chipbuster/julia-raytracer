@@ -1,5 +1,9 @@
 SBT-raytracer 1.0
 
+//////////////////
+// LIGHT TESTS  //
+//////////////////
+
 point_light {
     position = (4, 4, 4);
     color = (.5, .5, .5);
@@ -22,3 +26,19 @@ ambient_light {
     color = (1, 0, .1);
 }
 
+//////////////////////////
+// BASIC GEOMETRY TESTS //
+//////////////////////////
+
+cone {
+        capped=false;
+        height=2;
+        bottom_radius=0.5;
+        top_radius=0.2;
+}
+
+box {}
+
+cylinder{}
+
+sphere{}

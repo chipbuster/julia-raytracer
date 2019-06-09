@@ -32,9 +32,10 @@ function parseBooleanExpression(tokens::Vector{Token})
     return val
 end
 
-function parseIdentExpression(tokens::Vector{Token})::AbstractString
+function parseIdentExpression(tokens::Vector{Token})
     _ = Get!(tokens)
     _ = Read!(tokens,EQUALS)
     val = parseIdent(tokens)
     _ = Read!(tokens, SEMICOLON)
+    return val
 end
