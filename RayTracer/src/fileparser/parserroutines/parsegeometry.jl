@@ -9,7 +9,7 @@ function parseSphere(tokens::Vector{Token}, trans::TransformStack, mat::Material
 
     while true
         tok = Peek(tokens)
-        if !(tok isa SymbolToken)
+        if !isSymbolToken(tok)
             error("Expected a symbol token, but got " * string(tok))
         end
 
@@ -32,7 +32,7 @@ function parseBox()
 
     while true
         tok = Peek(tokens)
-        if !(tok isa SymbolToken)
+        if !isSymbolToken(tok)
             error("Expected a symbol token, but got " * string(tok))
         end
 
@@ -57,7 +57,7 @@ function parseSquare()
 
     while true
         tok = Peek(tokens)
-        if !(tok isa SymbolToken)
+        if !(isSymbolToken(tok))
             error("Expected a symbol token, but got " * str(tok))
         end
 
@@ -81,7 +81,7 @@ function parseCylinder()
 
     while true
         tok = Peek(tokens)
-        if !(tok isa SymbolToken)
+        if !isSymbolToken(tok)
             error("Expected a symbol token, but got " * str(tok))
         end
 

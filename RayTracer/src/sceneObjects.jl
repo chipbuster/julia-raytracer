@@ -8,6 +8,7 @@ export Light, DirectionalLight, PointLight, AmbientLight
 export Camera
 
 using StaticArrays
+using Reexport
 using ..RayHelper
 import FileIO: load
 
@@ -16,6 +17,7 @@ import FileIO: load
 #################
 
 include("materials.jl")
+@reexport using .Materials
 
 #####################
 ### Scene Objects ###

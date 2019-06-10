@@ -10,7 +10,7 @@ function parseScalarList(tokens::Vector{Token})::Vector{Float64}
     if !isa(Peek(tokens),SymbolToken) || next.kind != RPAREN
         push!(parseScalar(parsedVals))
         while true
-            if Peek(tokens) isa SymbolToken && next.kind != RPAREN
+            if isSymbolToken(Peek(tokens)) && next.kind != RPAREN
                 break
             end
 

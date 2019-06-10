@@ -1,9 +1,12 @@
-module Material
+module Materials
 
 # Datatypes used for images: RGB is a 3-vector describing RGB values
 # N0f8 is a Normalized rational using 0 integer bits and 8 fractional bits
 # (essentially an 8-bit uint normalized to [0,1])
 using Images: RGB, N0f8
+using ....RayHelper
+
+export MaterialParameter, MappedParameter, FixedParameter, getMappedValue, Material
 
 """
 Represents information about how a material reflects/absorbs/refracts light.

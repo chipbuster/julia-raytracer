@@ -10,9 +10,9 @@ function parseMaterial(tokens::Vector{Token}, parent::Material)
 
     mat = deepcopy(parent)
     hasName = false
-    while true:
+    while true
         tok = Peek(tokens)
-        if tok isa SymbolToken
+        if isSymbolToken(tok)
             if tok.kind == EMISSIVE
                 mat.k_e = parseVec3dMaterialParameter(tokens)
             elseif tok.kind == AMBIENT
@@ -42,12 +42,17 @@ function parseMaterial(tokens::Vector{Token}, parent::Material)
                     if !haskey(namedMaterials, matName)
                         namedMaterials[matName] = mat
                     else
-                        throw MethodError("Tried to redefine material " + matName)
+                        throw(MethodError("Tried to redefine material " + matName))
                     end
                 end
                 return mat
             else
-                throw MethodError("Unexpected token in parseMaterial")
+                throw(MethodError("Unexpected token in parseMaterial"))
+            end
+        else
+            throw(MethodError("Expected symboltoken but got something else"))
+        end
+    end
 end
 
 # Key-values
@@ -79,7 +84,7 @@ end
 function parseScalarMaterialParameter(tokens::Vector{Token})::MaterialParameter
     _ = Get!(tokens)
     Read!(tokens, EQUALS)
-    if Peek(tokens) isa SymbolToken && Peek(tokens).kind == MAP
+    if isSymbolToken(Peek(tokens)) && Peek(tokens).kind == MAP
         Read!(tokens, MAP)
         Read!(tokens, LPAREN)
         fname = parseIdent(tokens)
@@ -89,6 +94,6 @@ function parseScalarMaterialParameter(tokens::Vector{Token})::MaterialParameter
     else
         value = parseScalar(tokens)
         CondRead!(tokens, SEMICOLON)
-        return FixedParameter(@SVector [value value value])
+        return FixedParameter(SVec3(value,value,value))
     end
 end

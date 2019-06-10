@@ -68,7 +68,7 @@ function parseGroup(tokens::Vector{Token}, transform::TransformStack, mat::Mater
     newMat = nothing::Union{Nothing,Material}
     objs = Vector{SceneObject}()
     Read!(tokens,LBRACE)
-    while true:
+    while true
         t = Peek(tokens)
         if t.kind in [SPHERE,BOX,SQUARE,CYLINDER,CONE,TRIMESH,TRANSLATE,ROTATE,
                     SCALE,TRANSFORM, LBRACE]
@@ -87,7 +87,7 @@ end
 
 function parseGeometry(tokens::Vector{Token}, transform::TransformStack, mat::Material)
     tok = Peek!(tokens)
-    if !(tok isa SymbolToken)
+    if !isSymbolToken(tok)
         error("Expected a symbol token but got " * string(tok))
     end
 

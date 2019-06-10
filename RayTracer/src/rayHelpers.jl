@@ -1,7 +1,7 @@
 module RayHelper
 
 export SMat4, SMat3, MMat4, MMat3
-export SVec4, SVec3, MVec4, MVec3
+export SVec4, SVec3, MVec4, MVec3, SVec2, MVec2
 
 using StaticArrays
 using LinearAlgebra

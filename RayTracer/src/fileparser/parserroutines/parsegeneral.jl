@@ -40,12 +40,5 @@ end
 
 """Check to see if a token is a SymbolToken of the specified kind"""
 function tokIsKind(tok::Token, tokt::TokType)::Bool
-    tok isa SymbolToken && tok.kind == tokt
+    isSymbolToken(tok) && tok.kind == tokt
 end
-
-
-
-# Define a transformation stack as a set of 4x4 matrices
-TMat = SMatrix{4,4}
-TStack = Vector{TMat}
-TInfo = Tuple{TStack, TMat}

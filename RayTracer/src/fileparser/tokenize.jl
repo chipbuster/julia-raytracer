@@ -100,30 +100,46 @@ export tokenizeProgram
     MAP
 end
 
-abstract type Token <: Any end
-
-struct FileLocInfo
+mutable struct FileLocInfo
     fname  :: AbstractString
     lineno :: Int
     colno  :: Int
 end
 
-struct Token{T} where {T}
+"""
+Lines start at 1, but columns start at zero because we always increment
+the column counter before we let the user see the counter
+"""
+FileLocInfo(fname) = FileLocInfo(fname,1,0)
 
-struct SymbolToken <: Token
-    kind::TokType
+function recordNewLine(f::FileLocInfo)
+    f.lineno += 1
+    f.colno = 1
+end
+
+function copy(f::FileLocInfo)::FileLocInfo
+    return FileLocInfo(f.fname, f.lineno, f.colno)
+end
+
+# In theory this shouldn't be needed...but I'm a little drunk and I keep mixing
+# lines and columns here :(
+recordChar(f::FileLocInfo) = f.colno += 1
+
+struct Token{T}
+    data::T
     floc::FileLocInfo
 end
 
-struct IdentToken <: Token
-    ident::String
-    floc::FileLocInfo
-end
+SymbolToken = Token{TokType}
+IdentToken = Token{String}
+NumericToken = Token{Float64}
 
-struct NumericToken <: Token
-    value::Float64
-    floc::FileLocInfo
-end
+isSymbolToken(a::Token{TokType}) = true
+isSymbolToken(a::Token{T}) where {T} = false
+isIdentToken(a::Token{String}) = true
+isIdentToken(a::Token{T}) where {T} = false
+isNumericToken(a::Token{Float64}) = true
+isNumericToken(a::Token{T}) where {T} = false
 
 # This is technically bad because you cannot generate an instance of FileLocInfo
 # from a shown instance...but I doubt anyone will really want to do that.
@@ -136,8 +152,6 @@ function Base.show(io::IO, m::FileLocInfo)
         print(io, m.fname, ":", m.lineno, ":" , m.colno)
     end
 end
-
-function Base.show(io::IO, m::FileLocInfo)
 
 const tokenNames = Dict{TokType, String}(
     EOFSYM => "EOF",
@@ -254,26 +268,28 @@ const reservedWords = Dict{String, TokType}(
     "viewdir" => VIEWDIR,
 )
 
-function tokenizeProgram(fcontents::IOStream)::Vector{Token}
+function tokenizeProgram(fcontents::IOStream, fname::AbstractString)::Vector{Token}
 """Scan program, generating a list of tokens for parsing"""
     tokenlist = Vector{Token}()
     current::Char = ' '
 
-    linenum = 0
-    colnum = 0
+    # Generate our initial FileLocInfo
+    flocinfo = FileLocInfo(fname)
 
-    T = SymbolToken(SBT_RAYTRACER)
+    T = SymbolToken(SBT_RAYTRACER, copy(flocinfo))
     push!(tokenlist, T)
+    recordNewLine(flocinfo)
+
     while !eof(fcontents)
-        skipWhitespace(fcontents)
-        T = getToken(fcontents)
+        skipWhitespace(fcontents, flocinfo)
+        T = getToken(fcontents, flocinfo)
         push!(tokenlist,T)
     end
     return tokenlist
 end
 
 
-function getToken(fcontents::IOStream)::Token
+function getToken(fcontents::IOStream, flocinfo::FileLocInfo)::Token
     """Process the next token in the filestream"""
     if eof(fcontents)
         return SymbolToken(EOFSYM)
@@ -281,23 +297,24 @@ function getToken(fcontents::IOStream)::Token
 
     next = Char(Base.peek(fcontents))
     if isletter(next) || next == '_'
-        getIdent(fcontents)
+        getIdent(fcontents, flocinfo)
     elseif next == '"'
-        return getQuotedIdent(fcontents)
+        return getQuotedIdent(fcontents, flocinfo)
     elseif isdigit(next) || next == '-' || next == '.'
-        return getScalar(fcontents)
+        return getScalar(fcontents, flocinfo)
     else
-        return getPunctuation(fcontents)
+        return getPunctuation(fcontents, flocinfo)
     end
 end
 
-function getIdent(fcontents::IOStream)::Token
+function getIdent(fcontents::IOStream, flocinfo::FileLocInfo)::Token
 """Read either an identifier or a reserved word token"""
     s = ""
     while !eof(fcontents)
         c = Char(Base.peek(fcontents))
         if (isletter(c) || isdigit(c) || c == '_' || c == '-')
             read(fcontents,Char)
+            recordChar(flocinfo)
             s *= c
         else
             break
@@ -306,17 +323,18 @@ function getIdent(fcontents::IOStream)::Token
 
     # Which token type to use?
     if s in keys(reservedWords)
-        SymbolToken(reservedWords[s])
+        SymbolToken(reservedWords[s], copy(flocinfo))
     else
-        IdentToken(s)
+        IdentToken(s, copy(flocinfo))
     end
 end
 
-function getQuotedIdent(fcontents::IOStream)::Token
+function getQuotedIdent(fcontents::IOStream, flocinfo::FileLocInfo)::Token
 """Read either an identifier or a reserved word token"""
     s = ""
     while !eof(fcontents)
         c = read(fcontents,Char)
+        recordChar(flocinfo)
         if c == '\n'
             error("Unterminated string constant")
         elseif c == '"'
@@ -328,80 +346,98 @@ function getQuotedIdent(fcontents::IOStream)::Token
 
     # Which token type to use?
     if s in keys(reservedWords)
-        SymbolToken(reservedWords[s])
+        SymbolToken(reservedWords[s], copy(flocinfo))
     else
-        IdentToken(s)
+        IdentToken(s, copy(flocinfo))
     end
 end
 
-function getScalar(fcontents::IOStream)::NumericToken
+function getScalar(fcontents::IOStream,flocinfo::FileLocInfo)::NumericToken
     s = ""
     while true
         c = Char(Base.peek(fcontents))
         if isdigit(c) || c == '-' || c == '.' || c == 'e'
             s *= c
             read(fcontents,Char)
+            recordChar(flocinfo)
         else
             break
         end
     end
     val = parse(Float64, s)
 
-    NumericToken(val)
+    NumericToken(val, copy(flocinfo))
 end
 
-function getPunctuation(fcontents::IOStream)::SymbolToken
+function getPunctuation(fcontents::IOStream, flocinfo::FileLocInfo)::SymbolToken
     c = read(fcontents,Char)
+    recordChar(flocinfo)
     if c == '('
-        SymbolToken(LPAREN)
+        SymbolToken(LPAREN, copy(flocinfo))
     elseif c == ')'
-        SymbolToken(RPAREN)
+        SymbolToken(RPAREN, copy(flocinfo))
     elseif c == '{'
-        SymbolToken(LBRACE)
+        SymbolToken(LBRACE, copy(flocinfo))
     elseif c == '}'
-        SymbolToken(RBRACE)
+        SymbolToken(RBRACE, copy(flocinfo))
     elseif c == ','
-        SymbolToken(COMMA)
+        SymbolToken(COMMA, copy(flocinfo))
     elseif c == '='
-        SymbolToken(EQUALS)
+        SymbolToken(EQUALS, copy(flocinfo))
     elseif c == ';'
-        SymbolToken(SEMICOLON)
+        SymbolToken(SEMICOLON, copy(flocinfo))
     else
         error("Unexpected symbol in lex " * read(fcontents,String))
     end
 end
 
-function skipWhitespace(fcontents::IOStream)
-"""Strip all leading whitespace from string, including comments"""
+"""Strip all leading whitespace from string, including comments."""
+function skipWhitespace(fcontents::IOStream, flocinfo::FileLocInfo)
     while !eof(fcontents)
         c = Char(Base.peek(fcontents))
         if isspace(c)
+            if c == '\n'
+                print("cnline")
+                recordNewLine(flocinfo)
+            else
+                recordChar(flocinfo)
+            end
             read(fcontents,Char)
         elseif c == '/' && Char(Base.peek(fcontents)) == '/'
-            dropLineComment(fcontents)
+            dropLineComment(fcontents, flocinfo)
         elseif c == '/' && Char(Base.peek(fcontents)) == '*'
-            dropBlockComment(fcontents)
+            dropBlockComment(fcontents, flocinfo)
         else
             break
         end
     end
 end
 
-function dropLineComment(s::IOStream)
+function dropLineComment(s::IOStream, f::FileLocInfo)
     c = read(s,Char)
-    while !eof(s) && c != '\n'
+    recordChar(f)
+    while !eof(s) && Char(c) != '\n'
         c = read(s,Char)
+        recordChar(f)
+    end
+    if Char(c) == '\n' 
+        recordNewLine(f)
     end
 end
 
-function dropBlockComment(s::IOStream)
+function dropBlockComment(s::IOStream, f::FileLocInfo)
     c = read(s,Char)
+    recordChar(f)
     while !eof(s)
-        if c == '*' && Char(Base.peek(s)) == '/'
+        if c == '\n'
+            recordNewLine(f)
+        elseif c == '*' && Char(Base.peek(s)) == '/'
             c = read(s,Char)
+            recordChar(f)
             break
         end
         c = read(s,Char)
+        recordChar(f)
     end
 end
 

@@ -6,7 +6,6 @@ using StaticArrays
 using LinearAlgebra
 
 using DataStructures: Stack
-using ..Material
 
 include("tokenize.jl")
 using .RayLex
@@ -14,6 +13,9 @@ using ..SceneObjects
 
 """A Vector for all named materials that have been parsed so far"""
 namedMaterials = Vector{Material}
+
+include("../rayHelpers.jl")
+using .RayHelper
 
 # Import the TokType enum values so we can use them to parse...
 
@@ -45,40 +47,17 @@ C++, it's easier to create a tree and DFS it, but in Julia, we use a stack with
 a cached transformation (see the TransformStack for details)
 =#
 
-# Keeps track of the transformations so far: the stack contains the individual
-# transformations, while the transform caches the product of all transformations
-# on the stack so far.
+# Data structure for caching transformations
+include("parserroutines/transformstack.jl")
 
-mutable struct TransformStack
-    xform::SMat4
-    stack::Stack{SMat4}
-end
-
-function pushTransform!(s::TransformStack, t::SMat4)
-    s.xform = s.xform * t
-    push!(s.stack, t)
-end
-
-function popTransform!(s::TransformStack)
-    t = pop!(s)
-    s.xform = s.xform * inv(t)  #Safe? Accumulating error?
-end
-
-TransformStack() = TransformStack(SMat4(I),
-                    begin
-    s = Stack{SMat4}()
-    push!(s, SMat4(I))
-    s
-end)
-
-include("parserroutines/parsegeneral.jl")
-include("parserroutines/parseliterals.jl")
-include("parserroutines/parsekeyvalue.jl")
-include("parserroutines/parsematerials.jl")
-include("parserroutines/parselight.jl")
-include("parserroutines/parsetransform.jl")
-include("parserroutines/parsegeometry.jl")
-include("parserroutines/parsetoplevel.jl")
+include("parserroutines/parsegeneral.jl")      # Manipulate the underlying tokstream
+include("parserroutines/parseliterals.jl")     # Parse literal values
+include("parserroutines/parsekeyvalue.jl")     # Parse lines of form 'key = val'
+include("parserroutines/parsematerials.jl")    # Parse material functions
+include("parserroutines/parselight.jl")        # Parse blocks dictating light
+include("parserroutines/parsetransform.jl")    # Parse transformation info
+include("parserroutines/parsegeometry.jl")     # Parse geometry (sphere,trimesh,etc)
+include("parserroutines/parsetoplevel.jl")     # Top-level functions
 
 function parseScene(tokens::Vector{Token})::Vector{SceneObject}
     Read!(tokens, RayLex.SBT_RAYTRACER)
